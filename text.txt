@@ -1,0 +1,17 @@
+The Huffman algorithm is a well-known technique for data compression, which is used to reduce the size of data 
+by encoding more frequent items with shorter codes and less frequent items with longer codes. This algorithm 
+was invented by David A. Huffman in 1952 while he was a Ph.D. student at MIT. It is an example of a lossless 
+compression algorithm, meaning that no data is lost in the compression process, and the original data can be 
+perfectly reconstructed from the compressed data.
+
+Huffman coding is based on the idea of using variable-length codes to represent different characters. 
+The key idea is to assign shorter codes to more frequent characters and longer codes to less frequent characters. 
+This results in a compressed form of the data, where the overall length of the encoded data is minimized.
+
+Huffman codes are prefix-free, meaning that no code is a prefix of any other code. This property is essential 
+because it ensures that the encoded data can be uniquely decoded. If the codes were not prefix-free, the decoder 
+might encounter ambiguity when trying to decode the data.
+
+The Huffman coding algorithm constructs a binary tree, called a Huffman tree, to generate the variable-length codes.
+Each leaf node in the tree represents a character, and the path from the root to a leaf determines the code for that 
+character. By traversing the tree, a unique binary code is generated for each character in the data.
