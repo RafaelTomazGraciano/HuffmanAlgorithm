@@ -5,6 +5,8 @@
 
 #define SIZE 256
 
+//Define the structs
+
 struct node{
     unsigned char character;
     int frequency;
@@ -15,6 +17,8 @@ struct list{
     Node *start;
     int size;
 };
+
+/*------------------------Part 1: Read File------------------------*/
 
 unsigned char *loadFileContent(FILE *file){
 //move pointer to end of file
@@ -37,7 +41,7 @@ unsigned char *loadFileContent(FILE *file){
     //read content of file and stores in vector
     size_t bytesRead = fread(text, 1, filesize, file);
     if (bytesRead != filesize) {
-        perror("Erro ao ler o arquivo");
+        perror("Error reading file");
         free(text);
         fclose(file);
         exit(1);
@@ -47,6 +51,8 @@ unsigned char *loadFileContent(FILE *file){
     text[filesize] = '\0';
     return text;
 }
+
+/*------------------------Part 2: Create Frequency Tabel------------------------*/
 
 void initializeTabel(unsigned int *tabel){
     for(int i = 0; i < SIZE; i++){
@@ -61,6 +67,8 @@ void fillFrequencyTabel(unsigned char *text, unsigned int *tabel){
         i++;
     }
 }
+
+/*------------------------Part 3: Create Ordered List------------------------*/
 
 List *createList(List *list){
     list = (List *) malloc(sizeof(List));
@@ -113,6 +121,8 @@ void fillList(unsigned int *tab, List *list){
     }
 }
 
+/*------------------------Part 4: Create Huffman Tree------------------------*/
+
 Node *removeStartNode(List *list){
     Node *aux = NULL;
 
@@ -164,6 +174,8 @@ int maxDepth(Node *tree){
     }
 }
 
+/*------------------------Part 5: Create Dictionary------------------------*/
+
 char **alocateDictionary(int columns){
     char **dictionary = (char **) malloc(SIZE * sizeof(char *));
     if(dictionary == NULL){
@@ -198,6 +210,8 @@ void generateDictionary(char **dictionary, Node *tree, char *path, int columns){
     }
 }
 
+/*------------------------Part 6: Codificate------------------------*/
+
 int stringLength(char **dictionary, unsigned char *text){
     int length = 0;
     for(int i = 0; text[i] != '\0'; i++){
@@ -206,35 +220,132 @@ int stringLength(char **dictionary, unsigned char *text){
     return length+1;
 }
 
-char *codificate(char **dictionary, unsigned char *text){
+char *encode(char **dictionary, unsigned char *text){
     int lenght = stringLength(dictionary, text);
 
-    char *code = calloc(lenght, sizeof(char));
+    char *encode = calloc(lenght, sizeof(char));
     for(int i = 0; text[i] != '\0'; i++){
-        strcat(code, dictionary[text[i]]);
+        strcat(encode, dictionary[text[i]]);
     } 
-    return code;
+    return encode;
 }
 
-// void imprimeDictionary(char **dictionary){
-//     for(int i = 0; i < SIZE; i++){
-//         printf("%3d: %s\n ", i, dictionary[i]);
-//     }
-// }
+/*------------------------Part 7: Decodificate------------------------*/
 
-// void lst_imprime(List *lst){
-//     Node *p;
-//     printf("tamanho lista: %d\n", lst->size);
-//     for(p = lst->start; p != NULL; p = p->next)
-//         printf("info = %d  character=%c\n", p->frequency, p->character);
-// }
+char *decode(char *code, Node *tree){
+    Node *aux = tree;
+    char *decode = calloc(strlen(code), sizeof(char));
+    char temp[2];
 
-// void arv_imprime(Node *raiz, int tam){
-//     if(raiz->left == NULL && raiz->right == NULL){
-//         printf("Folha : %c | Altura : %d\n", raiz->character, tam);
-//     }
-//     else{
-//         arv_imprime(raiz->left, tam+1);
-//         arv_imprime(raiz->right, tam+1);
-//     }
-// }
+    for(int i = 0; code[i] != '\0'; i++){
+        if(code[i] == '0'){
+            aux = aux->left;
+        }
+        else{
+            aux = aux->right;
+        }
+        if(aux->left == NULL && aux->right == NULL){
+            temp[0] = aux->character; //make it a string
+            temp[1] = '\0';
+            strcat(decode, temp);
+            aux = tree;
+        }
+    }
+    return decode;
+}
+
+/*------------------------Part 8: Compress------------------------*/
+
+void compress(char *code){
+    FILE *file = fopen("compressed.huff", "wb");
+    if(file == NULL){
+        perror("Error creating file");
+        exit(1);
+    }
+
+    int j = 7;
+    unsigned char mask, byte = 0; //00000000
+
+    for(int i = 0; code[i] != '\0'; i++){
+        mask = 1;
+        if(code[i] == '1'){
+            mask = mask << j; //shift the bits
+            byte = byte | mask; // OR operation
+        }
+        j--;
+
+        if(j < 0){ // byte formed
+            fwrite(&byte, sizeof(unsigned char), 1, file);
+            byte = 0;
+            j = 7;
+        }
+    }
+    if(j != 7){// byte left
+        fwrite(&byte, sizeof(unsigned char), 1, file);
+    }
+    fclose(file);
+}
+
+/*------------------------Part 9: Decompress------------------------*/
+
+unsigned int bit1(unsigned char byte, int i){
+    unsigned char mask = (1 << i); //shif the bits
+    return byte & mask; //AND operation
+}
+
+void decompress(Node *tree){
+    FILE *file = fopen("compressed.huff", "rb"); //compressed file
+    if(file == NULL){
+        perror("Error reading file");
+        exit(1);
+    }
+
+    FILE *output = fopen("output.txt", "w");  // output file 
+    if (output == NULL) {
+        perror("Error creating file");
+        exit(1);
+    }
+
+    Node *aux = tree;
+    unsigned char byte;
+
+    while(fread(&byte, sizeof(unsigned char), 1, file)){
+        for(int i = 7; i >= 0; i--){
+            if(bit1(byte, i)){
+                aux = aux->right;
+            }
+            else{
+                aux = aux->left;
+            }
+
+            if(aux->left == NULL && aux->right == NULL){
+                fputc(aux->character, output);
+                aux = tree;
+            }
+        }
+    }
+    fclose(file);
+    fclose(output);
+}
+
+/*------------------------Part 10: Free Memory------------------------*/
+
+void freeMatrix(char **matrix, int columns){
+    for (int i = 0; i < columns; i++) {
+        free(matrix[i]);  // Free each row
+    }
+    free(matrix);  // Free the array of row pointers
+}
+
+void freeTree(Node *tree) {
+    if (tree == NULL) {
+        return;
+    }
+
+    // Recursivamente libera as subárvores esquerda e direita
+    freeTree(tree->left);
+    freeTree(tree->right);
+    
+    // Libera o nó atual
+    free(tree);
+}
